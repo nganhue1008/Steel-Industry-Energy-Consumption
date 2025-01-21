@@ -1,0 +1,273 @@
+---
+title: "Dang_Final Project"
+author: "Hue Dang"
+date: "2024-05-14"
+output: word_document
+---
+
+## Introduction 
+With the dataset of Steel Industry,we will use methods such as advanced generalized linear models, multivariable and logistic regression, and time series analysis to answer questions related to the dataset. These methods will allow us to numerically and graphically describe the data, predict influential variables, make statistical inferences, and identify patterns through data mining techniques. The findings from this project will not only contribute to the strategic decision-making process at DAEWOO Steel Co. Ltd but also offer broader insights into improving energy efficiency within the steel industry.
+
+## Problem Statement 
+In today's rapidly evolving industrial landscape, understanding energy consumption patterns and optimizing operational efficiency are paramount for sustainability and economic viability. The steel industry, known for its energy-intensive processes, stands at the forefront of this challenge. The aim of this project is to delve into the intricate dynamics of energy usage within the steel industry, employing various statistical techniques to glean insights and inform strategic decision-making.
+The primary goal of this project is to unravel the underlying trends and factors influencing energy usage within the steel industry. By analyzing historical data, we seek to answer key questions such as the impact of load types on energy consumption, the presence of seasonal patterns in energy usage, and the association between different operational variables. Ultimately, our aim is to provide actionable insights that can aid in optimizing energy utilization and enhancing operational efficiency.
+## Methods 
+Questions to be Answered:
+- Are there significant differences in energy usage, reactive power, or other metrics between weekdays and weekends within the steel industry?
+- What are the overall trends in energy usage over the observed period, and are there any identifiable patterns or anomalies?
+- Is there a significant association between load type and energy usage within the steel industry?
+- Which variables significantly influence the energy consumption (Usage_kWh) in the steel industry, and how can we predict energy usage accurately considering multi collinearity among the predictors?
+
+The chosen methods for analysis were selected based on their appropriateness in addressing the specific research questions and leveraging the characteristics of the available data: 
+- T-test or ANOVA:The dataset includes information on energy usage, reactive power, and other metrics, along with the corresponding days of the week (Weekdays vs. Weekends). By conducting a t-test or ANOVA, we can determine if there are statistically significant differences in these metrics based on the day of the week
+- Linear Regression: Linear regression allows us to model the relationship between independent variables (such as time) and a dependent variable (energy usage). By fitting a linear regression model with time as the independent variable, we can identify any overall trends in energy usage and quantify their significance.
+- Chi-Square Test:The dataset includes information on load type (a categorical variable) and energy usage. By conducting a chi-square test, we can determine if there is a significant association between load type and energy usage within the steel industry.
+Lasso and Ridge Regression:By applying Lasso and Ridge regression, we can mitigate multicollinearity, improve the accuracy of time series forecasts for energy usage, and identify the most influential predictors in the dataset.
+
+## Data Description 
+- Data (Continuous): time data taken on the first of the month
+- Usage_kWh (Continuous):  Industry Energy Consumption  kWh
+- Lagging (Continuous):  Current reactive power kVarh
+- Leading Current reactive power (Continuous):  kVarh
+- CO2(Continuous):  ppm
+- NSM (Continuous):  Number of Seconds from midnight S
+- Week status (Categorical): (Weekend (0) or a Weekday(1))
+- Day of week (Categorical): Sunday, Monday : Saturday
+- Load Type (Categorical): Light Load, Medium Load, Maximum Load
+
+
+## Data Analysis 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+cat("\014") # clears console
+rm(list = ls()) # clears global environment
+try(dev.off(dev.list()["RStudioGD"]), silent = TRUE) # clears plots
+try(p_unload(p_loaded(), character.only = TRUE), silent = TRUE) #
+options(scipen = 100) # disables scientific notion for entire R session
+library(pacman)
+p_load(tidyverse)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+install.packages("corrplot")
+library(corrplot)
+library(stats)
+library(glmnet)
+getwd()
+setwd("C:/Users/dangn/Downloads/ALY/ALY/ALY6015/Final Project")
+```
+
+
+```{r, echo=TRUE}
+#1 Download the data set and read it into my script.
+steel_data <- read.csv("C:/Users/dangn/Downloads/ALY/ALY/ALY6015/Final Project/Steel_industry_data.csv")
+str(steel_data)
+colnames(steel_data)
+head(steel_data)
+nrow(steel_data) 
+dim(steel_data)
+
+#Check for missing values
+missing_values <- colSums(is.na(steel_data))
+
+# Display columns with missing values
+missing_values[missing_values > 0]
+```
+Checks for missing values in the dataframe columns and displays any columns with missing values if they exist.
+```{r, echo=TRUE}
+# Summary statistics
+summary(steel_data)
+```
+Generates summary statistics for each variable in the steel_data dataframe. It provides information such as minimum, 1st quartile, median, mean, 3rd quartile, and maximum values for numerical variables, along with the number of occurrences for each level in categorical variables. These statistics offer a comprehensive overview of the distribution and characteristics of the dataset, aiding in data exploration and analysis.
+
+ 
+```{r, echo=TRUE}
+# Bar plots for categorical variables
+barplot(table(steel_data$WeekStatus), main = "WeekStatus")
+barplot(table(steel_data$Load_Type), main = "Load_Type")
+```
+The bar heights correspond to the frequency of each load type, providing a visual comparison of their occurrences. Based on the result provided, the barplot illustrates that the frequency order is "light_load" > "medium_load" > "maximum_load".
+Each bar's height corresponds to the frequency of occurrences for each day of the week. Based on the provided result, all columns have nearly the same height, with Monday slightly higher than others, suggesting that Monday may have a slightly higher frequency of occurrences compared to other days.
+```{r, echo=TRUE}
+#Scatter plot
+pairs(~Usage_kWh + Lagging_Current_Reactive.Power_kVarh + CO2.tCO2. + NSM, data = steel_data)
+```
+The clearest positive linear relationship is observed between Usage_kWh and Lagging_Current_Reactive.Power_kVarh, indicating that as reactive power increases, energy consumption also increases.
+There is also a noticeable, albeit weaker, positive relationship between Usage_kWh and CO2.tCO2..
+The NSM variable shows that both Usage_kWh and Lagging_Current_Reactive.Power_kVarh vary significantly throughout the day, suggesting that time of day plays an important role in energy consumption and reactive power usage patterns.
+The correlation between energy usage and CO2 levels highlights the environmental impact of energy consumption in the steel industry and the importance of considering CO2 emissions in energy optimization strategies.
+
+```{r, echo=TRUE}
+# Correlation matrix
+correlation_matrix <- cor(steel_data[, c("Usage_kWh", "Lagging_Current_Reactive.Power_kVarh", "CO2.tCO2.", "NSM")])
+correlation_matrix
+```
+ The result shows the pairwise correlation coefficients between Usage_kWh, Lagging_Current_Reactive.Power_kVarh, CO2.tCO2., and NSM.
+Based on the provided result:
+- Usage_kWh has a strong positive correlation with Lagging_Current_Reactive.Power_kVarh and CO2.tCO2., as indicated by correlation coefficients close to 1.
+- There is a weak positive correlation between Usage_kWh and NSM, with a correlation coefficient of 0.2346.
+```{r, echo=TRUE}
+#Weekday & Weekend analysis 
+# Subset the data for weekdays and weekends
+weekday_data <- steel_data[steel_data$WeekStatus == "Weekday", ]
+weekend_data <- steel_data[steel_data$WeekStatus == "Weekend", ]
+
+# Perform t-test
+t_test_result <- t.test(weekday_data$Usage_kWh, weekend_data$Usage_kWh)
+print(t_test_result)
+
+# Perform ANOVA
+anova_result <- aov(Usage_kWh ~ WeekStatus, data = steel_data)
+print(summary(anova_result))
+```
+The extremely small p-value (< 0.00000000000000022) indicates strong evidence against the null hypothesis, suggesting that there is a significant difference in mean energy usage between weekdays and weekends.
+The confidence interval does not contain zero, further supporting the conclusion of a significant difference in mean energy usage.
+```{r, echo = TRUE}
+# Box plot for Usage_kWh by WeekStatus
+boxplot(Usage_kWh ~ WeekStatus, data = steel_data, 
+        xlab = "Weekday vs Weekend",
+        ylab = "Usage_kWh",
+        main = "Usage_kWh Comparison between Weekdays and Weekends",
+        col = c("blue", "green"),
+        border = "black")
+
+```
+The mean energy usage on weekdays (mean of x) is 33.62473 kWh, while the mean energy usage on weekends (mean of y) is 11.73233 kWh.
+
+
+```{r, echo=TRUE}
+#Usage trends 
+# Convert date column to Date format
+steel_data$date <- as.POSIXct(steel_data$date, format = "%m/%d/%Y %H:%M")
+
+# Extract time information
+steel_data$year <- as.numeric(format(steel_data$date, "%Y"))
+steel_data$month <- as.numeric(format(steel_data$date, "%m"))
+steel_data$day <- as.numeric(format(steel_data$date, "%d"))
+steel_data$hour <- as.numeric(format(steel_data$date, "%H"))
+steel_data$minute <- as.numeric(format(steel_data$date, "%M"))
+
+# Fit linear regression model
+lm_model <- lm(Usage_kWh ~ year + month + day + hour + minute, data = steel_data)
+
+# Plot Usage trends
+plot(steel_data$date, steel_data$Usage_kWh, xlab = "Date", ylab = "Usage_kWh", main = "Usage Trends over Time", type = "l", col = "blue")
+
+# Summary of the linear regression model
+summary(lm_model)
+```
+The linear regression model attempts to explain the variation in energy usage (Usage_kWh) based on the year, month, day, hour, and minute.
+The coefficients indicate the estimated change in energy usage for a one-unit change in each predictor variable, holding other variables constant.
+The adjusted R-squared value (0.07305) suggests that the model explains approximately 7.3% of the variance in energy usage, indicating that the predictors may not fully capture the variation.
+The p-values associated with each predictor variable indicate their statistical significance in explaining energy usage. For instance, 'month', 'day', 'hour', and 'minute' have p-values < 0.05, suggesting they are statistically significant predictors, while 'year' has a p-value of NA due to singularity issues.
+```{r, echo=TRUE}
+# Impact of Load type 
+# Create a contingency table of observed frequencies
+contingency_table <- table(steel_data$Load_Type, steel_data$Usage_kWh)
+
+# Perform chi-square test
+chi_square_result <- chisq.test(contingency_table)
+
+# Print the chi-square test result
+print(chi_square_result)
+```
+The chi-square test assesses whether there is a significant association between load type and energy usage.
+The extremely small p-value (< 0.00000000000000022) suggests strong evidence against the null hypothesis, indicating that there is a significant association between load type and energy usage within the steel industry dataset.
+The Pearson's chi-squared statistic (X-squared) and degrees of freedom (df) provide additional information about the strength and direction of this association.
+
+```{r, echo=TRUE}
+
+# Data preprocessing
+# Convert categorical variables to factors
+steel_data$WeekStatus <- as.factor(steel_data$WeekStatus)
+steel_data$Day_of_week <- as.factor(steel_data$Day_of_week)
+steel_data$Load_Type <- as.factor(steel_data$Load_Type)
+
+# Prepare the predictor matrix and response variable
+# The date column is excluded
+X <- model.matrix(Usage_kWh ~ . - date, steel_data)[,-1] # Remove the intercept column
+y <- steel_data$Usage_kWh
+
+# Split the data into training and test sets
+set.seed(123) # For reproducibility
+train_indices <- sample(1:nrow(X), size = floor(0.7 * nrow(X)))
+test_indices <- setdiff(1:nrow(X), train_indices)
+
+X_train <- X[train_indices,]
+y_train <- y[train_indices]
+X_test <- X[test_indices,]
+y_test <- y[test_indices]
+
+# Lasso regression
+lasso_model <- cv.glmnet(X_train, y_train, alpha = 1)
+lasso_pred <- predict(lasso_model, s = "lambda.min", newx = X_test)
+
+# Ridge regression
+ridge_model <- cv.glmnet(X_train, y_train, alpha = 0)
+ridge_pred <- predict(ridge_model, s = "lambda.min", newx = X_test)
+
+# Model evaluation
+lasso_mse <- mean((lasso_pred - y_test)^2)
+ridge_mse <- mean((ridge_pred - y_test)^2)
+
+# Output results
+cat("Lasso MSE:", lasso_mse, "\n")
+cat("Ridge MSE:", ridge_mse, "\n")
+
+# Visualizing the coefficients
+# Coefficients for Lasso
+lasso_coefs <- coef(lasso_model, s = "lambda.min")
+print("Lasso Coefficients:")
+print(lasso_coefs)
+
+# Coefficients for Ridge
+ridge_coefs <- coef(ridge_model, s = "lambda.min")
+print("Ridge Coefficients:")
+print(ridge_coefs)
+
+```
+Both the Lasso and Ridge regression models produce relatively similar Mean Squared Errors (MSE), indicating that both models perform comparably in predicting the energy consumption (Usage_kWh). The Lasso model has a slightly lower MSE, suggesting it might have a slight edge in prediction accuracy.
+Lasso Regression
+Lagging_Current_Reactive.Power_kVarh (0.385): A positive coefficient suggests that an increase in lagging reactive power consumption tends to increase the energy consumption.
+Leading_Current_Reactive_Power_kVarh (-0.176): A negative coefficient suggests that an increase in leading reactive power consumption tends to decrease the energy consumption.
+CO2.tCO2 (560.724): This large positive coefficient indicates a strong association between CO2 emissions and energy consumption. Higher CO2 levels are associated with higher energy consumption.
+Lagging_Current_Power_Factor (0.514): A positive coefficient implies that higher power factors (when lagging) are associated with higher energy consumption.
+Leading_Current_Power_Factor (-0.078): A negative coefficient indicates that higher power factors (when leading) are associated with lower energy consumption.
+NSM (0.00000765): Although small, a positive coefficient suggests a slight increase in energy consumption as the number of seconds from midnight increases.
+WeekStatusWeekend (2.558): Being a weekend (coded as 1) is associated with an increase in energy consumption compared to weekdays.
+Ridge Regression
+Lagging_Current_Reactive.Power_kVarh (0.397): Similar to Lasso, indicates an increase in energy consumption with lagging reactive power.
+Leading_Current_Reactive_Power_kVarh (-0.083): Similar to Lasso, a decrease in energy consumption with leading reactive power.
+CO2.tCO2 (524.331): Also indicates a strong positive association between CO2 emissions and energy consumption.
+Lagging_Current_Power_Factor (0.479): Positive association with energy consumption.
+Leading_Current_Power_Factor (-0.058): Negative association with energy consumption.
+NSM (0.00000861): Slight positive association with energy consumption.
+WeekStatusWeekend (2.721): Increase in energy consumption on weekends.
+## Conclusion 
+
+The analysis conducted aimed to address several questions posed in the introduction:
+
+- Usage Trends: Overall, there is a positive trend in energy usage within the steel industry dataset over the observed period. The linear regression analysis showed that while there is a significant association between various time-related factors (year, month, day, hour, minute) and energy usage, these factors only explain a small portion (approximately 7.3%) of the variance in energy usage. This suggests that other factors not included in the analysis may also influence energy consumption trends.
+
+- Significant Predictors: Variables such as Lagging_Current_Reactive.Power_kVarh, CO2.tCO2, WeekStatus, Day_of_week, and Load_Type are significant predictors of energy consumption.
+
+- Operational Patterns: Energy consumption varies significantly across different days of the week, with higher usage observed on Sundays and Wednesdays. The load type also plays a crucial role, with maximum loads leading to substantially higher energy consumption.
+- Model Performance: The Lasso regression model has a slightly lower Mean Squared Error (MSE) compared to the Ridge regression model, indicating marginally better predictive performance.
+
+Based on the insights gained from the analysis, several recommendations can be made:
+
+- Reduce CO2 Emissions: Given the strong correlation between CO2 levels and energy consumption, implementing measures to reduce CO2 emissions can lead to significant energy savings. This can be achieved through:
+
+ Adopting Cleaner Technologies: Invest in cleaner production technologies and processes that emit less CO2.
+Energy-efficient Practices: Encourage energy-efficient practices and optimize production processes to minimize CO2 emissions.
+
+- Optimize Load Management:
+
+Shift to Medium Loads: Where feasible, shift operations from maximum loads to medium loads to reduce energy consumption. This may involve adjusting production schedules and optimizing the use of machinery.
+ Load Balancing: Implement load balancing techniques to distribute energy usage more evenly across operations, avoiding peaks in maximum load periods.
+
+- Operational Adjustments:
+
+Weekday Operations: Since energy consumption is higher on weekends, consider shifting non-critical operations to weekdays where possible. This can help in balancing energy usage and potentially lowering overall consumption.
+Day-Specific Strategies: Develop day-specific energy management strategies, focusing on reducing energy consumption on high-usage days like Sundays and Wednesdays.
