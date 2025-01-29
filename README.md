@@ -34,3 +34,10 @@ trends in energy usage and quantify their significance.
 - Week status (Categorical): (Weekend (0) or a Weekday(1)) 
 - Day of week (Categorical): Sunday, Monday : Saturday 
 - Load Type (Categorical): Light Load, Medium Load, Maximum Load
+
+## Business recommendation 
+- Implement energy efficiency measures tailored to the specific load types and operational requirements
+- Develop strategies for managing energy usage based on time-related factors such as weekdays vs. weekends and peak vs. off-peak hours.
+- Establish a system for continuous monitoring and analysis of energy usage data to identify trends, anomalies, and opportunities for improvement.
+- Provide training and raise awareness among employees about the importance of energy conservation and efficiency measures
+
