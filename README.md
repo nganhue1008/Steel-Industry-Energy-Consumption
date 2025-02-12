@@ -1,4 +1,4 @@
-# Steel-Industry-Energy-Consumption
+# Steel-Industry-Energy-Consumption-Analysis
 
 ## Introduction & Business Statement 
 - Addresses key learning outcomes by requiring proficiency in R for data processing and analysis, utilization of advanced regression methods to extract meaningful insights for real-world business problems. 
